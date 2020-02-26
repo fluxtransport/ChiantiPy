@@ -104,7 +104,7 @@ class ion(ioneqOne, ionTrails, specTrails):
 
     def __init__(self, ionStr, temperature=None, eDensity=None,
                 pDensity='default', radTemperature=None, rStar=None,
-                abundance=None, setup=True, em=None, verbose=0):
+                abundance=None, setup=True, em=None, verbose=0, hdf5=False):
 
         self.IonStr = ionStr
         _tmp_convert_name = util.convertName(ionStr)
@@ -155,7 +155,7 @@ class ion(ioneqOne, ionTrails, specTrails):
                 self.argCheck(temperature, eDensity, pDensity, em)
                 self.ioneqOne()
 
-                self.setup()
+                self.setup(hdf5=hdf5)
         else:
             if verbose:
                 print(' ion %s not in masterlist, just various attributes, ionization, recombination rates'%(self.IonStr))
@@ -167,7 +167,7 @@ class ion(ioneqOne, ionTrails, specTrails):
 
         self.GrndLevels = chdata.GrndLevels[self.Iso]
 
-    def setup(self, alternate_dir=None, verbose=False):
+    def setup(self, alternate_dir=None, verbose=False, hdf5=True):
         """
         Setup various CHIANTI files for the ion including .wgfa, .elvlc, .scups,
         .psplups, .reclvl, .cilvl, and others.
@@ -196,10 +196,18 @@ class ion(ioneqOne, ionTrails, specTrails):
             wgfaFileName = None
         if alternate_dir:
             self.Elvlc = io.elvlcRead('',filename=elvlcFileName)
-            self.Wgfa = io.wgfaRead('',filename=wgfaFileName, elvlcname = elvlcFileName, total=True)
+            if not hdf5:
+                self.Wgfa = io.wgfaRead('',filename=wgfaFileName, elvlcname = elvlcFileName, total=True)
+            else:
+                self.Wgfa = io.hdf5Read('',filename=wgfaFileName.replace('.wgfa','.h5'), elvlcname = elvlcFileName, total=True)
         else:
             self.Elvlc = io.elvlcRead(self.IonStr)
-            self.Wgfa = io.wgfaRead(self.IonStr, total=True)
+            if not hdf5:
+                self.Wgfa = io.wgfaRead(self.IonStr, total=True)
+            else:
+                self.Wgfa = io.hdf5Read(self.IonStr, total=True)
+                #'',filename=wgfaFileName.replace('.wgfa','.h5'), elvlcname = elvlcFileName, total=True)
+                
         self.Nlvls = len(self.Elvlc['lvl'])
         self.Nwgfa = len(self.Wgfa['lvl1'])
         nlvlWgfa = max(self.Wgfa['lvl2'])

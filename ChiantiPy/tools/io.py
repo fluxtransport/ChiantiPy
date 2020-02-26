@@ -1168,7 +1168,8 @@ def masterListInfo(force=False, verbose=False):
             tmax = float(goodTemp.max())
             vgood = thisIoneq == thisIoneq.max()
             vgoodTemp = float(ioneq['ioneqTemperature'][vgood][0])
-            wgfa = wgfaRead(one)
+            #wgfa = wgfaRead(one)
+            wgfa = hdf5Read(one)
             nZeros = wgfa['wvl'].count(0.)
             # two-photon transitions are denoted by a wavelength of zero (0.)
             while nZeros > 0:
@@ -1766,7 +1767,6 @@ def vernerRead():
     #
     return {'pqn':pqn, 'l':l, 'eth':eth, 'e0':e0, 'sig0':sig0, 'ya':ya, 'p':p, 'yw':yw}
 
-
 def versionRead():
     """
     Read the version number of the CHIANTI database
@@ -1778,6 +1778,65 @@ def versionRead():
     vFile.close()
     return versionStr.strip()
 
+def hdf5Read(ions, filename=None, elvlcname=0, total=False, verbose=False):
+    """
+    Read CHIANTI data from a HDF5 (.h5) file.
+
+    Parameters
+    ----------
+    ions : `str`
+        Ion, e.g. 'c_5' for C V
+    filename : `str`
+        Custom filename, will override that specified by `ions`
+    elvlcname : `str`
+        If specified, the lsj term labels are returned in the 'pretty1' and 'pretty2'
+        keys of 'Wgfa' dict
+    total : `bool`
+        Return the summed level 2 avalue data in 'Wgfa'
+    verbose : `bool`
+
+    Returns
+    -------
+    Wgfa : `dict`
+        Information read from the .wgfa file. The dictionary structure is
+        {"lvl1","lvl2","wvl","gf","avalue","ref","ionS","filename"}
+
+    See Also
+    --------
+    ChiantiPy.tools.archival.wgfaRead : Read .wgfa file with the old format.
+    """
+    import h5py
+    if filename:
+        wgfaname = filename
+        if not elvlcname:
+            elvlcname = os.path.splitext(wgfaname)[0] + '.elvlc'
+            if os.path.isfile(elvlcname):
+                elvlc = elvlcRead('', elvlcname)
+            else:
+                elvlc = 0
+        else:
+            elvlc = elvlcRead('',elvlcname)
+
+    else:
+        fname = util.ion2filename(ions)
+        wgfaname = fname+'.h5'
+        elvlcname = fname + '.elvlc'
+        if os.path.isfile(elvlcname):
+            elvlc = elvlcRead('', elvlcname)
+        else:
+            elvlc = 0
+    if verbose:
+        if elvlc:
+            print(' have elvlc data')
+        else:
+            print(' do not have elvlc data')
+    
+    h = h5py.File(wgfaname, mode='r')
+    b = {}
+    for k in list(h.keys()):
+        b[k] = h[k].value
+    h.close()
+    return b
 
 def wgfaRead(ions, filename=None, elvlcname=0, total=False, verbose=False):
     """
